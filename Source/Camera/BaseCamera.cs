@@ -69,7 +69,7 @@ namespace OLDD_camera.Camera
 
         protected List<UnityEngine.Camera> AllCameras = new List<UnityEngine.Camera>();
         protected List<GameObject> AllCamerasGameObject = new List<GameObject>();
-        protected List<string> CameraNames = new List<string> { "GalaxyCamera", "Camera ScaledSpace", "Camera 01", "Camera 00" };
+        protected List<string> CameraNames = new List<string> { "GalaxyCamera", "Camera ScaledSpace", "UIMainCamera", "Camera 00" };
 
         internal ShaderInfo availableShaders = null;
 
@@ -94,7 +94,7 @@ namespace OLDD_camera.Camera
             MaxWindowSizeCoef = 1;
             while ((MaxWindowSizeCoef + 2) * WindowSize < Screen.height && MaxWindowSizeCoef < 10)
                 MaxWindowSizeCoef++;
-
+            WindowSizeCoef = Math.Min(HighLogic.CurrentGame.Parameters.CustomParams<KURSSettings>().defaultCamWindowSize, MaxWindowSizeCoef);
             ThisPart = thisPart;
             SubWindowLabel = windowLabel;
             WindowLabel = windowLabel;
@@ -127,7 +127,10 @@ namespace OLDD_camera.Camera
         {
 
 #if KSP170
-            IsOrbital = ThisPart.vessel.situation == Vessel.Situations.ORBITING;
+            if (ThisPart != null && ThisPart.vessel != null)
+                IsOrbital = ThisPart.vessel.situation == Vessel.Situations.ORBITING;
+            else
+                IsOrbital = false;
 #else
 
             IsOrbital = mode == FlightUIMode.ORBITAL;
@@ -186,13 +189,13 @@ namespace OLDD_camera.Camera
             AllCameras = AllCamerasGameObject.Select((go, i) =>
                 {
                     var camera = go.AddComponent<UnityEngine.Camera>();
-                    var cameraExample = UnityEngine.Camera.allCameras.FirstOrDefault(cam => cam.name == CameraNames[i]);
+                    UnityEngine.Camera cameraExample = UnityEngine.Camera.allCameras.FirstOrDefault(cam => cam.name == CameraNames[i]);
                     if (cameraExample != null)
                     {
                         camera.CopyFrom(cameraExample);
                         camera.name = string.Format("{1} copy of {0}", CameraNames[i], WindowCount);
                         camera.targetTexture = RenderTexture;
-                    }
+                   }
                     return camera;
                 }).ToList();
         }
@@ -269,7 +272,7 @@ namespace OLDD_camera.Camera
             CalculatedZoom = !ZoomMultiplier ? calculateZoom : calculateZoom * MinZoomMultiplier * 6;
             if (IsAuxiliaryWindowOpen)
             {
-                GUI.Label(new Rect(widthOffset + 12, 44, 80, 20), "Zoom: " + CalculatedZoom, Styles.Label13B);
+                GUI.Label(new Rect(widthOffset, 22, 80, 20), "Zoom: " + CalculatedZoom, Styles.Label13B);
 
                 if (FlightGlobals.ActiveVessel == ThisPart.vessel)
                     _isTargetPoint = GUI.Toggle(new Rect(widthOffset - 2, 233, 88, 20), _isTargetPoint, "Target Mark");
@@ -315,11 +318,13 @@ namespace OLDD_camera.Camera
                 if (_isTargetPoint)
                     GUI.DrawTexture(new Rect(TexturePosition.xMin + offsetX - 10, TexturePosition.yMax - offsetY - 10, 20, 20), _textureTargetMark);
             }
+#if false
             else
             {
                 if (IsOrbital)
                     GUI.DrawTexture(TexturePosition, TextureNoSignal[TextureNoSignalId]);
             }
+#endif
         }
 
         /// <summary>
@@ -396,7 +401,7 @@ namespace OLDD_camera.Camera
                 CurrentZoom = GUI.HorizontalSlider(new Rect(TexturePosition.width / 2 - 80, GUI.skin.font.lineHeight + 10, 160, 10), CurrentZoom, MaxZoom, MinZoom);
         }
 
-        #endregion DRAW LAYERS
+#endregion DRAW LAYERS
 
         private float GetX(float x, float z)
         {
